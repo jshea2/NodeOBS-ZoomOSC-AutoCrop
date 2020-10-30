@@ -1,0 +1,16 @@
+{
+  "name": "nodeobsosc",
+  "version": "1.0.0",
+  "main": "NodeOBS-ZoomOSC.js",
+  "scripts": {
+    "start": "node NodeOBS-ZoomOSC.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Joe Shea",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "node-osc": "^5.2.1",
+    "obs-websocket-js": "^4.0.1"
+  }
+}
