@@ -1,4 +1,4 @@
-//NODE OBS-OSC
+//NODEOBS-ZoomOSC-AutoCrop
 //by Joe Shea
 
 //Get Modules and Setup

@@ -1,7 +1,10 @@
 # NodeOBS-ZoomOSC-AutoCrop
-## Uses [Node.js](https://nodejs.org/) to automatically crop Zoom meeting participants into seperate 'Scenes' in [OBS](https://obsproject.com/) via ZoomOSC
+## Uses [Node.js](https://nodejs.org/) to automatically crop Zoom meeting participants into individual 'Scenes' in [OBS](https://obsproject.com/) via ZoomOSC
 
 ### This is an add-on to the [Node-OBSosc](https://github.com/jshea2/Node-OBSosc) repository. Please refer to this for OSC to OBS commands documentation
+
+### How it Works:
+ZoomOSC sends an OSC message to Node.js with the amount of participants in the gallery view and which order they're in. Node.js uses the order and amount of participants and translates it to determine the crop of the 2nd display, depending how many and where the participants are. This updates everytime each participant turns on/off their video or the gallery view changes. This is sent via the OBS Websocket.
 
 
 ### Requires:
@@ -85,6 +88,30 @@ const zoomOSCPortOut = 8000;
   or  
 
   `npm start`
+
+#
+## Using NodeOBS-ZoomOSC
+
+Once you run "NodeOBS-ZoomOSC.js" it will log IP and Port info, number of available scenes, a list of all scenes with numbers (see [Node-OBSosc]("https://github.com/jshea2/Node-OBSosc")), and OSC coming from ZoomOSC.
+
+## Setting up ZoomOSC
+
+***- A 2nd display is required for this to work***
+
+***- Currently only a total of 9 participants are supported***
+
+- Open ZoomOSC 
+
+- Set it to "Gallery View"
+
+- Set ZoomOSC to Fullscreen on 2nd display
+
+- Find the "..." next to your own box and click "Hide Self View"
+
+## Setting Up OBS
+
+- Import and use the "OBS Scene-ZoomOSC.json" into your OBS Scene Collection. (This is included in the repository)
+- The Scenes and Sources name must stay the same. The numbers correspond with the roles from ZoomOSC (If you want a participant to be a different number, then reorder the names in your ZoomOSC save.config file, then send a `/load` command to ZoomOSC to get the changes) 
 
 
 
