@@ -1,4 +1,4 @@
-//NODEOBS-ZoomOSC-AutoCrop
+//NodeOBS-ZoomOSC
 //by Joe Shea
 
 //Get Modules and Setup
@@ -19,14 +19,19 @@ const oscClientIp = "127.0.0.1";
 const oscPortOut = 53000;
 const oscOutPrefix = "/cue/"
 const oscOutSuffix = "/start"
-//Set if OBS sends OSC Out ('on' or 'off')
-const obsOscOut = 'off'
 //ZoomOSC Server (IN) Config
 const zoomOSCServerIp = "127.0.0.1";
 const zoomOSCPortIn = 1234;
 //ZoomOSC Client (OUT) Config
 const zoomOSCClientIp = "127.0.0.1";
 const zoomOSCPortOut = 8000;
+//QLab OSC Response Server (IN) Config
+const qlabOscServerIp = "127.0.0.1";
+const qlabOscPortIn = 53001;
+//ZoomOSC Delay
+let millisec = 614
+
+
 
 //Connect to OBS
 obs.connect({
@@ -43,9 +48,8 @@ obs.connect({
         console.log(data.scenes.forEach((thing, index) => {
             console.log((index + 1) + " - " + thing.name);                  //Log List of Available Scenes with OSC Index
         }));
-        clientZoom.send("/zoom/update", (err) => {                          //Sends 'Update' OSC Command to ZoomOSC
-            if (err) console.log(err);
-        })
+        clientZoom.send("/zoom/load", 1)
+        clientZoom.send("/zoom/autoUpdate", 1)
         console.log('-- Use "/scene [index]" For OSC Control --\n\n');      //Log OSC Scene Syntax
     })
     .catch(err => {
@@ -58,6 +62,13 @@ obs.on('SwitchScenes', data => {
     console.log(`New Active Scene: ${data.sceneName}`);
 });
 
+let currentSceneItem
+//Save Scene Item as Variable
+obs.on("SceneItemSelected", data => {
+    currentSceneItem = data['item-name']
+    console.log("Selected Scene Item: " + currentSceneItem)
+    
+})
 
 
 // Handler to Avoid Uncaught Exceptions.
@@ -70,13 +81,50 @@ const client = new Client(oscClientIp, oscPortOut);
 const clientZoom = new Client(zoomOSCClientIp, zoomOSCPortOut);
 var server = new Server(oscPortIn, oscServerIp);
 var serverZoom = new Server(zoomOSCPortIn, zoomOSCServerIp);
+var serverQlab = new Server(qlabOscPortIn, qlabOscServerIp)
 
-//OSC Server (IN)
+//ZoomOSC Server (IN)
 server.on('listening', () => {
   console.log("\n\n" + 'OSC Server is listening on...\n IP: ' + oscServerIp + '\n Port: ' + oscPortIn);
   console.log('\nOSC Server is sending back on...\n IP: ' + oscClientIp + '\n Port: ' + oscPortOut);
   console.log("\n\n" + 'ZoomOSC Server is listening on...\n IP: ' + zoomOSCServerIp + '\n Port: ' + zoomOSCPortIn);
 })
+
+// //Qlab Response to ZoomOSC "SM" Playhead Cue via Chat
+// serverQlab.on('message', (msg) => {
+//      //console.log(msg)
+//      let parse
+//      let currentCue
+     
+//     if(msg[0].includes('playbackPosition')){
+//         client.send('/cue/playhead/number')
+//         client.send('/runningCues/shallow')
+//     }
+
+//     if(msg[0].includes('/runningCues/shallow')){
+//         let runningCue = JSON.parse(msg[1])
+
+//         if (runningCue.data[0] !== undefined){
+//             clientZoom.send('/zoom/chat', 'SM', `** CUE "${runningCue.data[2].number}" Triggered! **`)
+//             clientZoom.send('/zoom/chat', 'SM', `-                                       -`)
+//         console.log(`Qlab Cue "${runningCue.data[2].number}" was Triggered`)
+//         //console.log(runningCue.data)
+//         }
+        
+//     }
+
+//     if(msg[0].includes('/number') && msg[0].includes('/reply')){
+//         parse = JSON.parse(msg[1])
+//         currentCue = parse.data
+//         setTimeout(() => {
+//             clientZoom.send('/zoom/chat', 'SM', `-- standing by cue: "${parse.data}" --`)
+//         }, 100); 
+//         console.log(`'${parse.data}' - Qlab Cue Stading By`)
+//         //console.log(currentCue)
+//     }
+
+
+// })
 
 //OSC -> OBS
 server.on('message', (msg) => {
@@ -288,6 +336,26 @@ server.on('message', (msg) => {
             console.log("Error: Invalid Syntax. Make Sure There Are NO SPACES in Scene Name and Source Name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
         })
     } 
+
+    //Triggers Filter Visibility On/Off
+    else if (msg[0].includes('filterVisibility')){
+        console.log(`OSC IN: ${msg}`)
+        var msgArray = msg[0].split("/")
+        msgArray.shift()
+        var visiblef;
+        if(msg[1] === 0 || msg[1] === 'off'){
+            visiblef = false
+        } else if(msg[1] === 1 || msg[1] === 'on'){
+            visiblef = true
+        }
+        obs.send("SetSourceFilterVisibility", {
+            'sourceName': msgArray[0].split('_').join(' '),
+            'filterName': msgArray[1].split('_').join(' '),
+            'filterEnabled': visiblef
+        }).catch(() => {
+            console.log("Error: Invalid Syntax. Make Sure There Are NO SPACES in Source Name and Filter name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
+        })
+    } 
     //Triggers the Source Opacity (via Filter > Color Correction)
     else if (msg[0].includes('opacity')){
         console.log(`OSC IN: ${msg[0]} ${msg[1]}`)
@@ -344,10 +412,130 @@ server.on('message', (msg) => {
         obs.send("SetSceneItemProperties", {
             'scene-name': msgArray[0].toString().split('_').join(' '),
             'item': msgArray[1].toString().split('_').join(' '),
-            'position': { 'x': x, 'y': y + 540, 'alignment': 0}
+            'position': { 'x': x, 'y': y + 540}
         }).catch(() => {
             console.log("ERROR: Invalis Position Syntax")
         })
+    }
+
+    //Source Position Select Move
+    else if (msg[0] === '/move'){
+        return obs.send("GetCurrentScene").then(data => {
+        console.log(`OSC IN: ${msg}`)
+        var msgArray = msg[0].split("/")
+        msgArray.shift()
+        var x = Math.floor((msg[2]*2000))
+        var y = Math.floor((msg[1]*2000) + 960)
+        console.log(x + " " + y)
+        obs.send("SetSceneItemProperties", {
+            'scene-name': data.name,
+            'item': currentSceneItem,
+            'position': { 'x': x + 540, 'y': y, 'alignment': 0}
+        }).catch(() => {
+            console.log("ERROR: Invalis Position Syntax")
+        })
+    })
+    }
+
+        //Source Position Select MoveX
+        else if (msg[0] === '/movex'){
+            return obs.send("GetCurrentScene").then(data => {
+            console.log(`OSC IN: ${msg}`)
+            var msgArray = msg[0].split("/")
+            msgArray.shift()
+            var x = Math.floor((msg[1]*2000))
+            var y = Math.floor((msg[1]*2000) + 960)
+            console.log(x + " " + y)
+            obs.send("SetSceneItemProperties", {
+                'scene-name': data.name,
+                'item': currentSceneItem,
+                'position': { 'x': x + 540, 'alignment': 0}
+            }).catch(() => {
+                console.log("ERROR: Invalis Position Syntax")
+            })
+        })
+        }
+
+        //Source Position Select MoveY
+        else if (msg[0] === '/movey'){
+            return obs.send("GetCurrentScene").then(data => {
+            console.log(`OSC IN: ${msg}`)
+            var msgArray = msg[0].split("/")
+            msgArray.shift()
+            var x = Math.floor((msg[2]*2000))
+            var y = Math.floor((msg[1]*2000) + 960)
+            console.log(x + " " + y)
+            obs.send("SetSceneItemProperties", {
+                'scene-name': data.name,
+                'item': currentSceneItem,
+                'position': { 'y': y, 'alignment': 0}
+            }).catch(() => {
+                console.log("ERROR: Invalis Position Syntax")
+            })
+        })
+        }
+
+        
+    //Source Align
+    else if (msg[0] === '/align'){
+        return obs.send("GetCurrentScene").then(data => {
+        console.log(`OSC IN: ${msg}`)
+        var x = 0 + 960
+        var y = 0 + 540
+        obs.send("SetSceneItemProperties", {
+            'scene-name': data.name.toString(),
+            'item': currentSceneItem,
+            'position': {'x': x, 'y':y, 'alignment': msg[1]}
+        }).catch(() => {
+            console.log("Error: Select A Scene Item in OBS for Alignment")
+        })
+    })
+    }
+
+    //Set Transition Override
+    else if(msg[0].includes('/transOverrideType')){
+        console.log(`OSC IN: ${msg}`)
+        var msgArray = msg[0].split("/")
+        msgArray.shift()
+        console.log("Messge array: " + msgArray)
+        return obs.send("GetCurrentScene").then(data => {
+        obs.send("SetSceneTransitionOverride", {
+            'sceneName': data.name,
+            'transitionName': msgArray[1].toString(),
+        })
+    })
+    }
+
+    //Set Transition Override
+    else if(msg[0] === '/transOverrideDuration'){
+        let currentSceneName
+        console.log(`OSC IN: ${msg}`)
+        return obs.send("GetCurrentScene").then(data => {
+            currentSceneName = data.name
+        return obs.send("GetSceneTransitionOverride", {
+            'sceneName': currentSceneName
+        }).then(data => {
+            obs.send("SetSceneTransitionOverride", {
+                'sceneName': currentSceneName,
+                'transitionName': data.transitionName,
+                'transitionDuration': Math.floor(msg[1])
+            })
+        })
+        })
+    }
+
+    //Source Size
+    else if (msg[0] === '/size'){
+        return obs.send("GetCurrentScene").then(data => {
+        console.log(`OSC IN: ${msg}`)
+        obs.send("SetSceneItemProperties", {
+            'scene-name': data.name.toString(),
+            'item': currentSceneItem,
+            'scale': {'x': msg[1], 'y': msg[1]}
+        }).catch(() => {
+            console.log("Error: Select A Scene Item in OBS for Size")
+        })
+    })
     }
 
     //Source Scale Translate
@@ -364,22 +552,77 @@ server.on('message', (msg) => {
             console.log("Error: Invalid Scale Syntax. Make Sure There Are NO SPACES in Scene Name and Source Name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
         })
     } 
+    
+    //Source Rotation Translate
+    else if (msg[0].includes('rotate')){
+        console.log(`OSC IN: ${msg}`)
+        var msgArray = msg[0].split("/")
+        msgArray.shift()
+        var visible;
+        obs.send("SetSceneItemProperties", {
+            'scene-name': msgArray[0].split('_').join(' ').toString(),
+            'item': msgArray[1].split('_').join(' ').toString(),
+            'rotation': msg[1]
+        }).catch(() => {
+            console.log("Error: Invalid Rotation Syntax. Make Sure There Are NO SPACES in Scene Name and Source Name. /[Scene Name]/[Source Name]/visible 0 or 1, example: /Wide/VOX/visible 1")
+        })
+    } 
+    
+    //Add SceneItem (NOT YET AVAILABLE)
+    else if (msg[0].includes('addScene')){
+        return obs.send("GetCurrentScene").then(data => {
+            console.log(data.name)
+            obs.send("AddSceneItem", {
+                "sceneName": data.name,
+                "sourceName": msg[1].toString()
+            })
+        })
+    } else if (msg[0] === "/lock"){
+        obs.send("GetScene")
+        obs.send("GetSceneItemProperties")
+    } 
+
+    else if(msg[0] === "/delay"){
+        millisec  = Math.floor(msg[1])
+        console.log("Delay is now: " + millisec + "ms")
+    }
+
+    else if(msg[0] === "/zv"){
+        clientZoom.send("/zoom/video/on", msg[1])
+    }
+
+    else if(msg[0] === "/za"){
+        clientZoom.send("/zoom/mic/unmute", msg[1])
+    }
+
+    else if (msg[0] === "/fuck"){
+        client.send(`${oscOutPrefix}FUCK${oscOutSuffix}`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
+                     if (err) console.error(err);
+                   });
+    }
 
     //Log Error
     else {
+        console.log(msg)
         console.log("Error: Invalid OSC command. Please refer to Node OBSosc on Github for Command List")
     }
 });
 
-//OBS -> OSC Client (OUT)
-if (obsOscOut === 'on'){
-obs.on('SwitchScenes', data => {
-    client.send(`${oscOutPrefix}${data.sceneName}${oscOutSuffix}`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
-        if (err) console.error(err);
-      });
-    })
-} else if (obsOscOut === 'off'){
-}
+// //OBS -> OSC Client (OUT)
+// obs.on('SwitchScenes', data => {
+//     client.send(`${oscOutPrefix}${data.sceneName}${oscOutSuffix}`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
+//         if (err) console.error(err);
+//       });
+//     })
+
+//Send Update Requests Command, So Qlab Will Send OSC When Anything Happens in QLab 
+client.send('/updates', 1)
+
+//This is the same as above, but it does it every 59 seconds, because QLab times out after 1min apparently.
+setInterval(() => {
+    client.send('/updates', 1)
+}, 59000);
+
 
 
 
@@ -388,37 +631,43 @@ obs.on('SwitchScenes', data => {
 //See Documentation For Which Letter Corresponds With Which Crop In OBS
 // 1 person:
 const a = 49
-const b = 88
+const a1 = 61
+const b = 97
 // 2 people:
-const c = 274
+const c = 281
+const c1 = 268
 const d = 964
 const e = 13
 // 3-4 people:
-const f = 52
-const g = 542
-const h = 92
+const f = 54
+const f1 = 67
+const g = 550
+const g1 = 193
+const h = 109
 const i = 528
 // 5-6 people:
-const j = 186
+const j = 180
+const j1 = 537
 const k = 1278
 const l = 18
 const m = 648
 const n = 334
 // 7 people:
-const o = 48
-const p = 708
-const q = 1254
-const r = 91
-const s = 673
-const t = 379
+const o = 56
+const p = 710
+const q = 1246
+const r = 114
+const s = 680
+const t = 376
+const z = 389
 // 8-9 people:
-const u = 381
+const u = 68
+const v = 698
+const w = 397
 
 
 //ZoomOSC Auto-Cropping
 serverZoom.on('message', (msg) => {
-
-    var millisec = 635
 
     if(msg.includes("/zoomosc/gallery/count")){
         return null
@@ -458,9 +707,6 @@ if (msg.includes("/zoomosc/sound/off")){
         clientZoom.send('/zoom/load', 1, () => {
             console.log("Sending '/zoom/load 1' to ZoomOSC")
         })
-        clientZoom.send("/zoom/update", 1, () => {
-            console.log("Sending '/zoom/update 1' to ZoomOSC")
-            })
     }
 }
     if (msg[0] === "/zoomosc/gallery/order" || msg[0] === "/zoomosc/vid/galorder") {
@@ -473,7 +719,7 @@ if (msg.includes("/zoomosc/sound/off")){
               obs.send("SetSceneItemProperties", {
                 'scene-name': box1.toString(),
                 'item': `Display Capture ${msg[1]}`,
-                'crop': { 'top': a, 'bottom': a, 'right': b, 'left': b },
+                'crop': { 'top': a, 'bottom': a1, 'right': b, 'left': b },
             }).catch((err) => {console.log(err)})
         }, millisec)
                 break;
@@ -487,12 +733,12 @@ if (msg.includes("/zoomosc/sound/off")){
               obs.send("SetSceneItemProperties", {
                 'scene-name': box1.toString(),
                 'item': `Display Capture ${msg[1]}`,
-                'crop': { 'top': c, 'bottom': c, 'right': d, 'left': e },
+                'crop': { 'top': c1, 'bottom': c, 'right': d, 'left': e },
             }).catch((err) => {console.log(err)})
             obs.send("SetSceneItemProperties", {
                 'scene-name': box2.toString(),
                 'item': `Display Capture ${msg[2]}`,
-                'crop': { 'top': c, 'bottom': c, 'right': e, 'left': d },
+                'crop': { 'top': c1, 'bottom': c, 'right': e, 'left': d },
             }).catch((err) => {console.log(err)})
         }, millisec)
                 break;
@@ -517,7 +763,7 @@ if (msg.includes("/zoomosc/sound/off")){
             obs.send("SetSceneItemProperties", {
                 'scene-name': box3.toString(),
                 'item': `Display Capture ${msg[3]}`,
-                'crop': { 'top': g, 'bottom': f, 'right': i, 'left': i },
+                'crop': { 'top': j1, 'bottom': f1, 'right': j1, 'left': j1 },
             }).catch((err) => {console.log(err)})
         }, millisec)
                 break;
@@ -542,12 +788,12 @@ if (msg.includes("/zoomosc/sound/off")){
             obs.send("SetSceneItemProperties", {
                 'scene-name': box3.toString(),
                 'item': `Display Capture ${msg[3]}`,
-                'crop': { 'top': g, 'bottom': f, 'right': d, 'left': h },
+                'crop': { 'top': j1, 'bottom': f1, 'right': d, 'left': h },
             }).catch((err) => {console.log(err)})
             obs.send("SetSceneItemProperties", {
                 'scene-name': box4.toString(),
                 'item': `Display Capture ${msg[4]}`,
-                'crop': { 'top': g, 'bottom': f, 'right': h, 'left': d },
+                'crop': { 'top': j1, 'bottom': f1, 'right': h, 'left': d },
             }).catch((err) => {console.log(err)})
         }, millisec)
                 break;
@@ -579,12 +825,12 @@ if (msg.includes("/zoomosc/sound/off")){
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box4.toString(),
                     'item': `Display Capture ${msg[4]}`,
-                    'crop': { 'top': g, 'bottom': j, 'right': d, 'left': n },
+                    'crop': { 'top': j1, 'bottom': g1, 'right': d, 'left': n },
                 }).catch((err) => {console.log(err)})
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box5.toString(),
                     'item': `Display Capture ${msg[5]}`,
-                    'crop': { 'top': g, 'bottom': j, 'right': n, 'left': d },
+                    'crop': { 'top': j1, 'bottom': g1, 'right': n, 'left': d },
                 }).catch((err) => {console.log(err)})
             }, millisec)
                     break;
@@ -617,17 +863,17 @@ if (msg.includes("/zoomosc/sound/off")){
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box4.toString(),
                     'item': `Display Capture ${msg[4]}`,
-                    'crop': { 'top': g, 'bottom': j, 'right': k, 'left': l },
+                    'crop': { 'top': j1, 'bottom': g1, 'right': k, 'left': l },
                 }).catch((err) => {console.log(err)})
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box5.toString(),
                     'item': `Display Capture ${msg[5]}`,
-                    'crop': { 'top': g, 'bottom': j, 'right': m, 'left': m },
+                    'crop': { 'top': j1, 'bottom': g1, 'right': m, 'left': m },
                 }).catch((err) => {console.log(err)})
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box6.toString(),
                     'item': `Display Capture ${msg[6]}`,
-                    'crop': { 'top': g, 'bottom': j, 'right': l, 'left': k },
+                    'crop': { 'top': j1, 'bottom': g1, 'right': l, 'left': k },
                 }).catch((err) => {console.log(err)})
             }, millisec)
                     break;
@@ -661,22 +907,22 @@ if (msg.includes("/zoomosc/sound/off")){
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box4.toString(),
                     'item': `Display Capture ${msg[4]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': q, 'left': r },
+                    'crop': { 'top': t, 'bottom': z, 'right': q, 'left': r },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box5.toString(),
                     'item': `Display Capture ${msg[5]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': s, 'left': s },
+                    'crop': { 'top': t, 'bottom': z, 'right': s, 'left': s },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box6.toString(),
                     'item': `Display Capture ${msg[6]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': r, 'left': q },
+                    'crop': { 'top': t, 'bottom': z, 'right': r, 'left': q },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box7.toString(),
                     'item': `Display Capture ${msg[7]}`,
-                    'crop': { 'top': p, 'bottom': o, 'right': s, 'left': s },
+                    'crop': { 'top': v, 'bottom': u, 'right': s, 'left': s },
                 })
             }, millisec)
                     break;
@@ -711,27 +957,27 @@ if (msg.includes("/zoomosc/sound/off")){
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box4.toString(),
                     'item': `Display Capture ${msg[4]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': q, 'left': r },
+                    'crop': { 'top': t, 'bottom': z, 'right': q, 'left': r },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box5.toString(),
                     'item': `Display Capture ${msg[5]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': s, 'left': s },
+                    'crop': { 'top': t, 'bottom': z, 'right': s, 'left': s },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box6.toString(),
                     'item': `Display Capture ${msg[6]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': r, 'left': q },
+                    'crop': { 'top': t, 'bottom': z, 'right': r, 'left': q },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box7.toString(),
                     'item': `Display Capture ${msg[7]}`,
-                    'crop': { 'top': p, 'bottom': o, 'right': d, 'left': u },
+                    'crop': { 'top': v, 'bottom': u, 'right': d, 'left': w },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box8.toString(),
                     'item': `Display Capture ${msg[8]}`,
-                    'crop': { 'top': p, 'bottom': o, 'right': u, 'left': d },
+                    'crop': { 'top': v, 'bottom': u, 'right': w, 'left': d },
                 })
             }, millisec)
                     break;
@@ -767,32 +1013,32 @@ if (msg.includes("/zoomosc/sound/off")){
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box4.toString(),
                     'item': `Display Capture ${msg[4]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': q, 'left': r },
+                    'crop': { 'top': t, 'bottom': z, 'right': q, 'left': r },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box5.toString(),
                     'item': `Display Capture ${msg[5]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': s, 'left': s },
+                    'crop': { 'top': t, 'bottom': z, 'right': s, 'left': s },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box6.toString(),
                     'item': `Display Capture ${msg[6]}`,
-                    'crop': { 'top': t, 'bottom': t, 'right': r, 'left': q },
+                    'crop': { 'top': t, 'bottom': z, 'right': r, 'left': q },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box7.toString(),
                     'item': `Display Capture ${msg[7]}`,
-                    'crop': { 'top': p, 'bottom': o, 'right': q, 'left': r },
+                    'crop': { 'top': v, 'bottom': u, 'right': q, 'left': r },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box8.toString(),
                     'item': `Display Capture ${msg[8]}`,
-                    'crop': { 'top': p, 'bottom': o, 'right': s, 'left': s },
+                    'crop': { 'top': v, 'bottom': u, 'right': s, 'left': s },
                 })
                 obs.send("SetSceneItemProperties", {
                     'scene-name': box9.toString(),
                     'item': `Display Capture ${msg[9]}`,
-                    'crop': { 'top': p, 'bottom': o, 'right': r, 'left': q },
+                    'crop': { 'top': v, 'bottom': u, 'right': r, 'left': q },
                 })
             }, millisec)
                     break;
@@ -813,7 +1059,9 @@ serverZoom.on('message', (msg) => {
             'item': `Display Capture ${msg[1]}`,
             'visible': false,
         })
-    } else if (msg[0] === "/zoomosc/vid/on" || msg[0] === "/zoomosc/video/on"){
+    } 
+    
+    else if (msg[0] === "/zoomosc/vid/on" || msg[0] === "/zoomosc/video/on"){
         setTimeout(() => {
         obs.send("SetSceneItemProperties", {
             'scene-name': msg[1].toString(),
@@ -821,6 +1069,31 @@ serverZoom.on('message', (msg) => {
             'visible': true,
             })
         }, 1000)
+    } 
+    
+    else if (msg[0] === "/zoomosc/chat" && msg[2] === "SM" && msg[3] === ";" || msg[3] === "G" || msg[3] === "g"){
+        console.log("SM Triggered a 'GO' Command to Qlab")
+        client.send(`/go`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
+            if (err) console.error(err);
+          });
+    } 
+    
+    else if(msg[0] === "/zoomosc/chat" && msg[2] === "SM" && msg[3] === "!"){
+        console.log("SM has Triggered a 'PANIC' to Qlab")
+        clientZoom.send("/zoom/chat", "SM", "-- PANIC in QLab was Triggered --")
+        client.send(`/panic`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
+            if (err) console.error(err);
+          });
     }
+
+    else if(msg[0] === "/zoomosc/chat" && msg[2] === "SM"){
+        if(msg[3].includes("G2q") || msg[3].includes("g2q")){
+        var g2qMessage = msg[3].substring(4)
+        console.log(`SM Triggered Qlab Cue: '${g2qMessage}'`)
+        client.send(`/go/${g2qMessage}`, (err) => {  //Takes OBS Scene Name and Sends it Out as OSC String (Along with Prefix and Suffix)
+            if (err) console.error(err);
+          });
+        }
+    } 
 })
 

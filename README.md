@@ -3,6 +3,13 @@
 
 ### This is an add-on to the [Node-OBSosc](https://github.com/jshea2/Node-OBSosc) repository. Please refer to this for OSC to OBS commands documentation
 
+Example Video of a production that used this and what can be possible:
+
+
+<a href="https://youtu.be/pR-0IUBodrc" target="_blank"><img src="http://img.youtube.com/vi/pR-0IUBodrc/0.jpg" 
+alt="NodeOBS-ZoomOSC-Autocropper DEMO Video" width="300" border="10" /></a>
+
+#
 ### How it Works:
 ZoomOSC sends an OSC message to Node.js with the amount of participants in the gallery view and which order they're in. Node.js uses the order and amount of participants and translates it to determine the crop of the 2nd display, depending how many and where the participants are. This updates everytime each participant turns on/off their video or the gallery view changes. This is sent via the OBS Websocket.
 
@@ -112,7 +119,17 @@ Once you run "NodeOBS-ZoomOSC.js" it will log IP and Port info, number of availa
 
 - Import and use the "OBS Scene-ZoomOSC.json" into your OBS Scene Collection. (This is included in the repository)
 - The Scenes and Sources name must stay the same. The numbers correspond with the roles from ZoomOSC (If you want a participant to be a different number, then reorder the names in your ZoomOSC save.config file, then send a `/load` command to ZoomOSC to get the changes) 
+#
+## Setup and Signal Flow References:
+<img src="assets/Screen Shot 2021-01-13 at 3.24.12 AM.png" style="500px;">
+<img src="assets/NTFRN Setup.PNG" style="500px;">
 
+#
+## TouchOSC Control:
+Manually moving around and scaling source's in OBS isn't the quickest or most accurate. This TouchOSC layout is made to quickly edit source's alignment, scale, position, transition type, and transition duration.
+ 
+ *The .touchosc file is included with this repository.*
+<img src="assets/IMG_A1A773F3A72E-1.jpeg" style="500px">
 
-
+## Credits:
 This was inspired by [Other Lonestar](https://www.youtube.com/watch?v=WUJUGsxdMEQ)'s Node-Red version.
