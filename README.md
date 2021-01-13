@@ -17,7 +17,7 @@ ZoomOSC sends an OSC message to Node.js with the amount of participants in the g
 
 ### Requires:
 
-### [OBS](https://obsproject.com/), [obs-websocket](https://github.com/Palakis/obs-websocket/releases), [Node.js](https://nodejs.org/), [obs-websocket-js](https://github.com/haganbmj/obs-websocket-js), & [node-osc](https://github.com/MylesBorins/node-osc), [ZoomOSC](https://www.liminalet.com/zoomosc-downloads) (if you are on Mac, join the [Slack Channel](https://app.slack.com/client/T018R5246R4/C018WFQDA4D?force_cold_boot=1) to download the beta).
+### [OBS](https://obsproject.com/), [obs-websocket](https://github.com/Palakis/obs-websocket/releases), [Node.js](https://nodejs.org/), [obs-websocket-js](https://github.com/haganbmj/obs-websocket-js), & [node-osc](https://github.com/MylesBorins/node-osc), [ZoomOSC](https://www.liminalet.com/zoomosc-downloads)
 
 
 ## Installation and Setup:
