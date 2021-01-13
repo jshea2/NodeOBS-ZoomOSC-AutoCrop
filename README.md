@@ -134,3 +134,7 @@ Manually moving around and scaling source's in OBS isn't the quickest or most ac
 
 ## Credits:
 This was inspired by [Other Lonestar](https://www.youtube.com/watch?v=WUJUGsxdMEQ)'s Node-Red version.
+
+<a href="https://discord.gg/FJ79AKPgSk">
+        <img src="https://img.shields.io/discord/308323056592486420?logo=discord"
+            alt="chat on Discord"></a>
