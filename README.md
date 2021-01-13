@@ -3,11 +3,13 @@
 
 ### This is an add-on to the [Node-OBSosc](https://github.com/jshea2/Node-OBSosc) repository. Please refer to this for OSC to OBS commands documentation
 
-Example Video of a production that used this and what can be possible:
+#
+
+## Example Video of a production that used this and what can be possible:
 
 
 <a href="https://youtu.be/pR-0IUBodrc" target="_blank"><img src="http://img.youtube.com/vi/pR-0IUBodrc/0.jpg" 
-alt="NodeOBS-ZoomOSC-Autocropper DEMO Video" width="300" border="10" /></a>
+alt="NodeOBS-ZoomOSC-Autocropper DEMO Video" width="500" border="10" /></a>
 
 #
 ### How it Works:
