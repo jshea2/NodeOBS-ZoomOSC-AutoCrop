@@ -5,8 +5,7 @@
 
 #
 
-## Example Video of a production that used this and what can be possible:
-
+## See It In Action! Video example from a production:
 
 <a href="https://youtu.be/pR-0IUBodrc" target="_blank"><img src="http://img.youtube.com/vi/pR-0IUBodrc/0.jpg" 
 alt="NodeOBS-ZoomOSC-Autocropper DEMO Video" width="500" border="10" /></a>
