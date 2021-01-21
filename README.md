@@ -10,7 +10,7 @@
 <a href="https://youtu.be/pR-0IUBodrc" target="_blank"><img src="http://img.youtube.com/vi/pR-0IUBodrc/0.jpg" 
 alt="NodeOBS-ZoomOSC-Autocropper DEMO Video" width="500" border="10" /></a>
 
-## Full Setup Walkthrough:
+## Install/Setup Walkthrough:
 
 <a href="https://youtu.be/GD2zCGdU-6Y" target="_blank"><img src="http://img.youtube.com/vi/GD2zCGdU-6Y/0.jpg" 
 alt="NodeOBS-ZoomOSC-Autocropper Setup" width="500" border="10" /></a>
