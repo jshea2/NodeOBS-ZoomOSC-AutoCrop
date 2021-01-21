@@ -10,6 +10,12 @@
 <a href="https://youtu.be/pR-0IUBodrc" target="_blank"><img src="http://img.youtube.com/vi/pR-0IUBodrc/0.jpg" 
 alt="NodeOBS-ZoomOSC-Autocropper DEMO Video" width="500" border="10" /></a>
 
+## Full Setup Walkthrough:
+
+<a href="https://youtu.be/GD2zCGdU-6Y" target="_blank"><img src="http://img.youtube.com/vi/GD2zCGdU-6Y/0.jpg" 
+alt="NodeOBS-ZoomOSC-Autocropper Setup" width="500" border="10" /></a>
+
+
 #
 ### How it Works:
 ZoomOSC sends an OSC message to Node.js with the amount of participants in the gallery view and which order they're in. Node.js uses the order and amount of participants and translates it to determine the crop of the 2nd display, depending how many and where the participants are. This updates everytime each participant turns on/off their video or the gallery view changes. This is sent via the OBS Websocket.
