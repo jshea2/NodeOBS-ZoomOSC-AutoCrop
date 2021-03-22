@@ -1,7 +1,10 @@
 # NodeOBS-ZoomOSC-AutoCrop
 ## Uses [Node.js](https://nodejs.org/) to automatically crop Zoom meeting participants into individual 'Scenes' in [OBS](https://obsproject.com/) via ZoomOSC
 
-### This is an add-on to the [Node-OBSosc](https://github.com/jshea2/Node-OBSosc) repository. Please refer to this for OSC to OBS commands documentation
+### This repository is the depricated version
+<img src="https://user-images.githubusercontent.com/70780576/112043270-b7d1a800-8b05-11eb-8094-b2ac405c9fb0.png" 
+alt="ZoomOSC-Autocropper" width="150" border="10" />
+## [Click Here](https://github.com/jshea2/AutoCropper-for-ZoomOSC-OBS) for the New Application
 
 #
 
